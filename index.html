@@ -79,7 +79,9 @@ body.emode .acc-actions{display:flex}
 .cbtn{padding:6px 14px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:700;transition:background .15s}
 .cbtn-edit{background:rgba(0,230,118,.12);color:var(--g)}.cbtn-edit:hover{background:rgba(0,230,118,.28)}
 .cbtn-del{background:rgba(255,76,106,.1);color:var(--red)}.cbtn-del:hover{background:rgba(255,76,106,.25)}
-.tag{font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:.3px;text-transform:uppercase}
+.acc-btn-copy,.acc-btn-visit{padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:700;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center}
+.acc-btn-copy{background:rgba(91,143,255,.12);color:var(--blue)}.acc-btn-copy:hover{background:rgba(91,143,255,.28)}
+.acc-btn-visit{background:rgba(0,230,118,.12);color:var(--g)}.acc-btn-visit:hover{background:rgba(0,230,118,.28)}
 .tg{background:rgba(0,230,118,.1);color:var(--g)}
 .tgold{background:rgba(255,214,0,.1);color:var(--gold)}
 .tr{background:rgba(255,76,106,.1);color:var(--red)}
@@ -146,14 +148,13 @@ body.emode .acc-actions{display:flex}
     <div class="logo"><div class="logo-dot"></div>CASINO<span style="color:var(--t2);font-size:20px">BASE</span></div>
     <div class="search-box"><input type="text" id="search" placeholder="Поиск казино..." oninput="filter()"></div>
     <div class="hdr-right">
-      <button class="btn btn-outline" id="btn-f" onclick="toggleFilters()">⚙ Фильтры</button>
       <button class="btn btn-outline" id="btn-em" onclick="toggleEdit()">✏ Редактировать</button>
       <button class="btn btn-g" id="btn-add" onclick="openForm()" style="display:none">+ Добавить</button>
     </div>
   </div>
 </header>
 
-<div class="filters-bar" id="fbar">
+<div class="filters-bar open" id="fbar">
   <div class="filters-inner">
     <div class="fg"><label>VIP-перенос</label>
       <select id="fv" onchange="filter()"><option value="">Все</option><option value="1">Есть</option><option value="0">Нет</option></select></div>
@@ -162,7 +163,7 @@ body.emode .acc-actions{display:flex}
     <div class="fg"><label>Спорт</label>
       <select id="fsp" onchange="filter()"><option value="">Все</option><option value="1">Есть</option><option value="0">Нет</option></select></div>
     <div class="fg"><label>Страна</label>
-      <input type="text" id="fco" placeholder="Россия..." oninput="filter()"></div>
+      <select id="fco" onchange="filter()"><option value="">Все страны</option></select></div>
     <div class="fg"><label>Бездеп</label>
       <select id="fnd" onchange="filter()"><option value="">Все</option><option value="1">Есть</option></select></div>
     <button class="btn btn-outline" onclick="clearF()" style="margin-left:auto">✕ Сбросить</button>
@@ -215,6 +216,7 @@ body.emode .acc-actions{display:flex}
   <div class="f-grid">
     <div class="ff"><label>Название *</label><input id="fn" placeholder="1win"></div>
     <div class="ff"><label>Рейтинг</label><input id="frat" placeholder="9.0 - 9.5"></div>
+    <div class="ff full"><label>Ссылка (URL)</label><input id="furl" placeholder="https://movelinks.pro/casino"></div>
     <div class="ff full"><label>Бонус</label><textarea id="fbon" rows="2" placeholder="100% до 50 000 руб. (x40)..."></textarea></div>
     <div class="ff full"><label>Кешбек</label><textarea id="fcb" rows="2"></textarea></div>
     <div class="ff"><label>Мин. депозит с карты</label><input id="fmd" placeholder="1000 руб. СБП: 500 руб."></div>
@@ -276,7 +278,7 @@ let all   = [], curId = null, emode = false;
 async function load() {
   const {data,error} = await sb.from('casinos').select('*').order('name');
   if (error) { toast('Ошибка: '+error.message,'err'); return; }
-  all = data; stats(); filter();
+  all = data; stats(); populateCountries(); filter();
 }
 
 // ─── Render ──────────────────────────────────
@@ -310,6 +312,8 @@ function accHTML(c) {
       </div>
       <div class="acc-right">
         ${c.promo&&c.promo!=='-'?`<span class="acc-promo">${esc(c.promo)}</span>`:''}
+        ${c.url?`<button class="acc-btn-copy" onclick="copyUrl(event,'${esc(c.url)}')" title="Скопировать ссылку">🔗</button>`:''}
+        ${c.url?`<a class="acc-btn-visit" href="${esc(c.url)}" target="_blank" onclick="event.stopPropagation()" title="Перейти">↗</a>`:''}
         ${c.rating?`<span class="acc-rating ${rc}">${esc(c.rating)}</span>`:''}
         <span class="acc-chevron">▼</span>
       </div>
@@ -336,6 +340,24 @@ function accHTML(c) {
 function toggleAcc(id) {
   const el = document.getElementById('acc-'+id);
   el.classList.toggle('open');
+}
+
+function populateCountries() {
+  const countries = new Set();
+  all.forEach(c => {
+    if (!c.countries) return;
+    c.countries.split(',').forEach(co => {
+      const t = co.trim();
+      if (t) countries.add(t);
+    });
+  });
+  const sel = document.getElementById('fco');
+  const sorted = [...countries].sort((a,b) => a.localeCompare(b,'ru'));
+  sorted.forEach(co => {
+    const o = document.createElement('option');
+    o.value = co; o.textContent = co;
+    sel.appendChild(o);
+  });
 }
 
 // ─── Filter ──────────────────────────────────
@@ -365,16 +387,22 @@ function filter() {
 }
 
 function clearF() {
-  ['fv','fver','fsp','fnd'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('fco').value='';
+  ['fv','fver','fsp','fnd','fco'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('search').value='';
   filter();
 }
+
+function toggleFilters(){}
 
 function stats() {
   document.getElementById('s-all').textContent  = all.length;
   document.getElementById('s-nd').textContent   = all.filter(c=>c.no_deposit&&c.no_deposit!=='-').length;
   document.getElementById('s-vip').textContent  = all.filter(c=>(c.vip_transfer||'').toLowerCase().startsWith('да')).length;
+}
+
+function copyUrl(e, url) {
+  e.stopPropagation();
+  navigator.clipboard.writeText(url).then(()=>toast('Ссылка скопирована ✓','ok'));
 }
 
 // ─── Detail ──────────────────────────────────
@@ -403,6 +431,7 @@ function openForm(id=null) {
   const c=id?all.find(x=>x.id===id):{};
   document.getElementById('fn').value   = c.name||'';
   document.getElementById('frat').value = c.rating||'';
+  document.getElementById('furl').value = c.url||'';
   document.getElementById('fbon').value = c.bonus||'';
   document.getElementById('fcb').value  = c.cashback||'';
   document.getElementById('fmd').value  = c.min_deposit||'';
@@ -418,7 +447,7 @@ function openForm(id=null) {
 async function save() {
   const name=document.getElementById('fn').value.trim();
   if(!name){toast('Введите название','err');return;}
-  const p={name,rating:document.getElementById('frat').value.trim(),bonus:document.getElementById('fbon').value.trim(),cashback:document.getElementById('fcb').value.trim(),min_deposit:document.getElementById('fmd').value.trim(),promo:document.getElementById('fpr').value.trim(),no_deposit:document.getElementById('fnd').value.trim(),sports_vip:document.getElementById('fsp').value.trim(),vip_transfer:document.getElementById('fvip').value.trim(),verification:document.getElementById('fver').value.trim(),countries:document.getElementById('fco').value.trim()};
+  const p={name,url:document.getElementById('furl').value.trim(),rating:document.getElementById('frat').value.trim(),bonus:document.getElementById('fbon').value.trim(),cashback:document.getElementById('fcb').value.trim(),min_deposit:document.getElementById('fmd').value.trim(),promo:document.getElementById('fpr').value.trim(),no_deposit:document.getElementById('fnd').value.trim(),sports_vip:document.getElementById('fsp').value.trim(),vip_transfer:document.getElementById('fvip').value.trim(),verification:document.getElementById('fver').value.trim(),countries:document.getElementById('fco').value.trim()};
   const {error}=curId?await sb.from('casinos').update(p).eq('id',curId):await sb.from('casinos').insert(p);
   if(error){toast('Ошибка: '+error.message,'err');return;}
   toast(curId?'Обновлено ✓':'Добавлено ✓','ok');
