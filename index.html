@@ -163,7 +163,7 @@ body.emode .acc-actions{display:flex}
     <div class="fg"><label>Спорт</label>
       <select id="fsp" onchange="filter()"><option value="">Все</option><option value="1">Есть</option><option value="0">Нет</option></select></div>
     <div class="fg"><label>Страна</label>
-      <select id="fco" onchange="filter()"><option value="">Все страны</option></select></div>
+      <input type="text" id="fco" placeholder="Россия..." oninput="filter()"></div>
     <div class="fg"><label>Бездеп</label>
       <select id="fnd" onchange="filter()"><option value="">Все</option><option value="1">Есть</option></select></div>
     <button class="btn btn-outline" onclick="clearF()" style="margin-left:auto">✕ Сбросить</button>
@@ -278,7 +278,7 @@ let all   = [], curId = null, emode = false;
 async function load() {
   const {data,error} = await sb.from('casinos').select('*').order('name');
   if (error) { toast('Ошибка: '+error.message,'err'); return; }
-  all = data; stats(); populateCountries(); filter();
+  all = data; stats(); filter();
 }
 
 // ─── Render ──────────────────────────────────
