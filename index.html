@@ -426,9 +426,30 @@ async function importData() {
   try { rows=JSON.parse(document.getElementById('imp-json').value); }
   catch(e){toast('Неверный JSON','err');return;}
   if(!Array.isArray(rows)){toast('Нужен массив []','err');return;}
-  const{error}=await sb.from('casinos').insert(rows);
-  if(error){toast('Ошибка: '+error.message,'err');return;}
-  toast(`Импортировано ${rows.length} казино ✓`,'ok');
+  
+  // Insert in chunks of 10 via direct fetch to avoid encoding issues
+  const chunkSize = 10;
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const res = await fetch(`${SB_URL}/rest/v1/casinos`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(chunk)
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      toast('Ошибка: ' + err, 'err');
+      return;
+    }
+    inserted += chunk.length;
+  }
+  toast(`Импортировано ${inserted} казино ✓`, 'ok');
   closeOv('imp'); await load();
 }
 
