@@ -125,7 +125,9 @@ body.emode .card{padding-bottom:44px}
 .toast.ok{border-color:var(--g);color:var(--g)}
 .toast.err{border-color:var(--red);color:var(--red)}
 
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px}
+.letter-divider{grid-column:1/-1;display:flex;align-items:center;gap:16px;margin-top:8px}
+.letter-divider span{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--g);line-height:1;flex-shrink:0}
+.letter-divider::after{content:'';flex:1;height:1px;background:var(--brd)}
 
 @media(max-width:640px){
   .hdr-inner{height:auto;padding:10px 16px;flex-wrap:wrap}
@@ -260,9 +262,9 @@ body.emode .card{padding-bottom:44px}
 // ══════════════════════════════════════════════
 //  CONFIG — ЗАПОЛНИ СВОИМИ ДАННЫМИ ИЗ SUPABASE
 // ══════════════════════════════════════════════
-const SB_URL  = 'https://ilppcsgfxumzbjkufwkf.supabase.co';
-const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlscHBjc2dmeHVtemJqa3Vmd2tmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODY4MDIsImV4cCI6MjA5NjM2MjgwMn0.Rw7Ez8Qu6VVcgkw7Y48kEWRP3iiKUaS6CZcBF7vko74';
-const PASS    = 'Xynlgeve_777'; // ← смени пароль!
+const SB_URL  = 'https://ТВОЙ_ПРОЕКТ.supabase.co';
+const SB_KEY  = 'ТВОЙ_ANON_KEY';
+const PASS    = 'casino2024'; // ← смени пароль!
 // ══════════════════════════════════════════════
 
 const sb  = supabase.createClient(SB_URL, SB_KEY);
@@ -279,7 +281,21 @@ async function load() {
 function renderCards(list) {
   const g = document.getElementById('grid');
   if (!list.length) { g.innerHTML='<div class="empty"><h3>Ничего не найдено</h3><p>Измените фильтры или поисковый запрос</p></div>'; return; }
-  g.innerHTML = list.map(cardHTML).join('');
+  
+  // Group by first letter
+  const groups = {};
+  list.forEach(c => {
+    const letter = c.name[0].toUpperCase();
+    if (!groups[letter]) groups[letter] = [];
+    groups[letter].push(c);
+  });
+  
+  let html = '';
+  Object.keys(groups).sort().forEach(letter => {
+    html += `<div class="letter-divider"><span>${letter}</span></div>`;
+    html += groups[letter].map(cardHTML).join('');
+  });
+  g.innerHTML = html;
 }
 
 function cardHTML(c) {
