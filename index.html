@@ -262,12 +262,12 @@ body.emode .card{padding-bottom:44px}
 // ══════════════════════════════════════════════
 //  CONFIG — ЗАПОЛНИ СВОИМИ ДАННЫМИ ИЗ SUPABASE
 // ══════════════════════════════════════════════
-const SB_URL  = 'https://ТВОЙ_ПРОЕКТ.supabase.co';
-const SB_KEY  = 'ТВОЙ_ANON_KEY';
+const SB_URL  = 'https://ilppcsgfxumzbjkufwkf.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlscHBjc2dmeHVtemJqa3Vmd2tmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODY4MDIsImV4cCI6MjA5NjM2MjgwMn0.Rw7Ez8Qu6VVcgkw7Y48kEWRP3iiKUaS6CZcBF7vko74';
 const PASS    = 'casino2024'; // ← смени пароль!
 // ══════════════════════════════════════════════
 
-const sb  = supabase.createClient(SB_URL, SB_KEY);
+const sb  = supabase.createClient(SB_URL.trim(), SB_KEY.trim().replace(/[^\x20-\x7E]/g, ''));
 let all   = [], curId = null, emode = false;
 
 // ─── Load ───────────────────────────────────
@@ -427,29 +427,25 @@ async function importData() {
   catch(e){toast('Неверный JSON','err');return;}
   if(!Array.isArray(rows)){toast('Нужен массив []','err');return;}
   
-  // Insert in chunks of 10 via direct fetch to avoid encoding issues
-  const chunkSize = 10;
-  let inserted = 0;
-  for (let i = 0; i < rows.length; i += chunkSize) {
-    const chunk = rows.slice(i, i + chunkSize);
-    const res = await fetch(`${SB_URL}/rest/v1/casinos`, {
-      method: 'POST',
-      headers: {
-        'apikey': SB_KEY,
-        'Authorization': 'Bearer ' + SB_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+  const cleanKey = SB_KEY.trim().replace(/[^\x20-\x7E]/g,'');
+  let ok=0;
+  for(let i=0;i<rows.length;i+=20){
+    const chunk=rows.slice(i,i+20);
+    const res=await fetch(`${SB_URL.trim()}/rest/v1/casinos`,{
+      method:'POST',
+      headers:{
+        'apikey':cleanKey,
+        'Authorization':'Bearer '+cleanKey,
+        'Content-Type':'application/json; charset=utf-8',
+        'Prefer':'return=minimal'
       },
-      body: JSON.stringify(chunk)
+      body:JSON.stringify(chunk)
     });
-    if (!res.ok) {
-      const err = await res.text();
-      toast('Ошибка: ' + err, 'err');
-      return;
-    }
-    inserted += chunk.length;
+    if(!res.ok){toast('Ошибка '+res.status+': '+await res.text(),'err');return;}
+    ok+=chunk.length;
+    toast(`Загружено ${ok}/${rows.length}...`,'ok');
   }
-  toast(`Импортировано ${inserted} казино ✓`, 'ok');
+  toast(`Импортировано ${ok} казино ✓`,'ok');
   closeOv('imp'); await load();
 }
 
