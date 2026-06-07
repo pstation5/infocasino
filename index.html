@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎰 CasinoBase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#07070f;--surf:#0d0d1e;--surf2:#131326;--brd:#1c1c38;
+  --g:#00e676;--gold:#ffd600;--red:#ff4c6a;--blue:#5b8fff;
+  --t:#dde0f5;--t2:#6e6e95;--t3:#3a3a58;--r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t);font-family:'Manrope',sans-serif;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:100;background:rgba(7,7,15,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--brd)}
+.hdr-inner{max-width:1440px;margin:0 auto;padding:0 24px;height:62px;display:flex;align-items:center;gap:14px}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:var(--g);flex-shrink:0;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--g);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+.search-box{flex:1;max-width:380px;position:relative}
+.search-box input{width:100%;background:var(--surf2);border:1px solid var(--brd);border-radius:10px;padding:9px 14px 9px 38px;color:var(--t);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.search-box input:focus{border-color:var(--g)}
+.search-box::before{content:'🔍';position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.btn{padding:8px 16px;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:all .2s;letter-spacing:.2px}
+.btn-g{background:var(--g);color:#000}.btn-g:hover{filter:brightness(1.1)}
+.btn-outline{background:var(--surf2);color:var(--t2);border:1px solid var(--brd)}.btn-outline:hover{color:var(--t);border-color:var(--g)}
+.btn-outline.on{color:var(--g);border-color:var(--g);background:rgba(0,230,118,.08)}
+.btn-red{background:rgba(255,76,106,.12);color:var(--red);border:1px solid rgba(255,76,106,.2)}.btn-red:hover{background:rgba(255,76,106,.25)}
+
+/* STATS BAR */
+.stats{background:var(--surf);border-bottom:1px solid var(--brd);padding:9px 24px}
+.stats-inner{max-width:1440px;margin:0 auto;display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.stat{font-size:12px;color:var(--t2)}.stat b{color:var(--t);font-weight:700}
+
+/* FILTERS */
+.filters-bar{background:var(--surf);border-bottom:1px solid var(--brd);padding:12px 24px;display:none}
+.filters-bar.open{display:block}
+.filters-inner{max-width:1440px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.fg{display:flex;align-items:center;gap:8px}
+.fg label{font-size:12px;color:var(--t2);white-space:nowrap;font-weight:600}
+.fg select,.fg input[type=text]{background:var(--surf2);border:1px solid var(--brd);border-radius:8px;padding:7px 10px;color:var(--t);font-size:13px;font-family:inherit;outline:none}
+.fg select:focus,.fg input:focus{border-color:var(--g)}
+
+/* MAIN */
+.main{max-width:1440px;margin:0 auto;padding:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+
+/* CARD */
+.card{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:18px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--g),var(--blue));opacity:0;transition:opacity .2s}
+.card:hover{border-color:rgba(0,230,118,.25);transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.card:hover::after{opacity:1}
+.c-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
+.c-name{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;line-height:1}
+.r-badge{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;flex-shrink:0;margin-top:2px}
+.rh{background:rgba(0,230,118,.14);color:var(--g)}
+.rm{background:rgba(255,214,0,.14);color:var(--gold)}
+.rl{background:rgba(255,76,106,.12);color:var(--red)}
+.c-bonus{font-size:11.5px;color:var(--t2);line-height:1.45;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.c-row{display:flex;align-items:baseline;gap:6px;margin-bottom:6px;font-size:12px}
+.c-lbl{color:var(--t2);width:74px;flex-shrink:0;font-weight:500}
+.c-val{color:var(--t)}
+.promo{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(255,214,0,.1);color:var(--gold);border:1px solid rgba(255,214,0,.2)}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.tag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.3px;text-transform:uppercase}
+.tg{background:rgba(0,230,118,.1);color:var(--g)}
+.tgold{background:rgba(255,214,0,.1);color:var(--gold)}
+.tr{background:rgba(255,76,106,.1);color:var(--red)}
+.tgray{background:rgba(110,110,149,.1);color:var(--t2)}
+
+/* card edit buttons */
+.c-actions{position:absolute;bottom:12px;right:12px;display:none;gap:6px}
+body.emode .c-actions{display:flex}
+body.emode .card{padding-bottom:44px}
+.cbtn{padding:5px 10px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;transition:background .15s}
+.cbtn-edit{background:rgba(0,230,118,.12);color:var(--g)}.cbtn-edit:hover{background:rgba(0,230,118,.28)}
+.cbtn-del{background:rgba(255,76,106,.1);color:var(--red)}.cbtn-del:hover{background:rgba(255,76,106,.25)}
+
+/* OVERLAY + MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s}
+.ov.open{opacity:1;pointer-events:all}
+.modal{background:var(--surf);border:1px solid var(--brd);border-radius:18px;width:100%;max-width:700px;max-height:92vh;overflow-y:auto;padding:28px;transform:translateY(12px);transition:transform .2s}
+.ov.open .modal{transform:none}
+.m-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.m-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px}
+.m-close{width:34px;height:34px;border-radius:9px;border:1px solid var(--brd);background:var(--surf2);color:var(--t2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.m-close:hover{color:var(--t);border-color:var(--g)}
+
+/* Detail grid */
+.d-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.df{background:var(--surf2);border-radius:10px;padding:14px}
+.df.full{grid-column:1/-1}
+.df-lbl{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+.df-val{font-size:13px;color:var(--t);line-height:1.55}
+.m-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:18px;border-top:1px solid var(--brd)}
+
+/* Form */
+.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.ff{display:flex;flex-direction:column;gap:6px}
+.ff.full{grid-column:1/-1}
+.ff label{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.6px}
+.ff input,.ff textarea{background:var(--surf2);border:1px solid var(--brd);border-radius:9px;padding:10px 12px;color:var(--t);font-size:13px;font-family:inherit;outline:none;transition:border-color .2s;resize:vertical}
+.ff input:focus,.ff textarea:focus{border-color:var(--g)}
+
+/* Import */
+.import-area{border:1px dashed var(--brd);border-radius:10px;padding:16px;margin-top:12px}
+.import-area textarea{width:100%;height:120px;background:var(--surf2);border:1px solid var(--brd);border-radius:8px;padding:10px;color:var(--t);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;resize:vertical;margin-top:8px}
+
+/* Empty / loading */
+.empty,.loading{grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--t2)}
+.empty h3{font-size:18px;margin-bottom:8px;color:var(--t)}
+.spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--brd);border-top-color:var(--g);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surf2);border:1px solid var(--brd);border-radius:12px;padding:13px 20px;font-size:14px;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:320px}
+.toast.show{transform:none;opacity:1}
+.toast.ok{border-color:var(--g);color:var(--g)}
+.toast.err{border-color:var(--red);color:var(--red)}
+
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px}
+
+@media(max-width:640px){
+  .hdr-inner{height:auto;padding:10px 16px;flex-wrap:wrap}
+  .search-box{max-width:none;width:100%;order:4;flex:0 0 100%}
+  .d-grid,.f-grid{grid-template-columns:1fr}
+  .main{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="logo"><div class="logo-dot"></div>CASINO<span style="color:var(--t2);font-size:20px">BASE</span></div>
+    <div class="search-box"><input type="text" id="search" placeholder="Поиск казино..." oninput="filter()"></div>
+    <div class="hdr-right">
+      <button class="btn btn-outline" id="btn-f" onclick="toggleFilters()">⚙ Фильтры</button>
+      <button class="btn btn-outline" id="btn-em" onclick="toggleEdit()">✏ Редактировать</button>
+      <button class="btn btn-g" id="btn-add" onclick="openForm()" style="display:none">+ Добавить</button>
+    </div>
+  </div>
+</header>
+
+<div class="filters-bar" id="fbar">
+  <div class="filters-inner">
+    <div class="fg"><label>VIP-перенос</label>
+      <select id="fv" onchange="filter()"><option value="">Все</option><option value="1">Есть</option><option value="0">Нет</option></select></div>
+    <div class="fg"><label>Верификация</label>
+      <select id="fver" onchange="filter()"><option value="">Все</option><option value="ob">Обязательная</option><option value="req">По запросу</option></select></div>
+    <div class="fg"><label>Спорт</label>
+      <select id="fsp" onchange="filter()"><option value="">Все</option><option value="1">Есть</option><option value="0">Нет</option></select></div>
+    <div class="fg"><label>Страна</label>
+      <input type="text" id="fco" placeholder="Россия..." oninput="filter()"></div>
+    <div class="fg"><label>Бездеп</label>
+      <select id="fnd" onchange="filter()"><option value="">Все</option><option value="1">Есть</option></select></div>
+    <button class="btn btn-outline" onclick="clearF()" style="margin-left:auto">✕ Сбросить</button>
+  </div>
+</div>
+
+<div class="stats"><div class="stats-inner">
+  <div class="stat">Казино: <b id="s-all">—</b></div>
+  <div class="stat">Показано: <b id="s-shown">—</b></div>
+  <div class="stat">С бездепом: <b id="s-nd">—</b></div>
+  <div class="stat">VIP-перенос: <b id="s-vip">—</b></div>
+</div></div>
+
+<main class="main">
+  <div class="grid" id="grid"><div class="loading"><div class="spinner"></div><br>Загружаем базу...</div></div>
+</main>
+
+<!-- Detail -->
+<div class="ov" id="ov-det" onclick="if(event.target===this)closeOv('det')">
+<div class="modal">
+  <div class="m-head">
+    <div class="m-title" id="d-name"></div>
+    <button class="m-close" onclick="closeOv('det')">✕</button>
+  </div>
+  <div class="d-grid">
+    <div class="df full"><div class="df-lbl">Бонус</div><div class="df-val" id="d-bonus"></div></div>
+    <div class="df"><div class="df-lbl">Кешбек</div><div class="df-val" id="d-cb"></div></div>
+    <div class="df"><div class="df-lbl">Мин. депозит с карты</div><div class="df-val" id="d-md"></div></div>
+    <div class="df"><div class="df-lbl">Промо-код</div><div class="df-val" id="d-promo"></div></div>
+    <div class="df"><div class="df-lbl">Бездеп</div><div class="df-val" id="d-nd"></div></div>
+    <div class="df"><div class="df-lbl">Ставки на спорт | VIP Бонус</div><div class="df-val" id="d-sp"></div></div>
+    <div class="df"><div class="df-lbl">Перенос VIP статуса</div><div class="df-val" id="d-vip"></div></div>
+    <div class="df"><div class="df-lbl">Верификация</div><div class="df-val" id="d-ver"></div></div>
+    <div class="df full"><div class="df-lbl">Целевые страны</div><div class="df-val" id="d-co"></div></div>
+    <div class="df"><div class="df-lbl">Рейтинг</div><div class="df-val" id="d-rat"></div></div>
+  </div>
+  <div class="m-foot">
+    <button class="btn btn-outline" onclick="closeOv('det')">Закрыть</button>
+    <button class="btn btn-g eonly" id="btn-det-edit" onclick="editFromDet()" style="display:none">✏ Редактировать</button>
+  </div>
+</div></div>
+
+<!-- Form -->
+<div class="ov" id="ov-form" onclick="if(event.target===this)closeOv('form')">
+<div class="modal">
+  <div class="m-head">
+    <div class="m-title" id="form-title">Добавить казино</div>
+    <button class="m-close" onclick="closeOv('form')">✕</button>
+  </div>
+  <div class="f-grid">
+    <div class="ff"><label>Название *</label><input id="fn" placeholder="1win"></div>
+    <div class="ff"><label>Рейтинг</label><input id="frat" placeholder="9.0 - 9.5"></div>
+    <div class="ff full"><label>Бонус</label><textarea id="fbon" rows="2" placeholder="100% до 50 000 руб. (x40)..."></textarea></div>
+    <div class="ff full"><label>Кешбек</label><textarea id="fcb" rows="2"></textarea></div>
+    <div class="ff"><label>Мин. депозит с карты</label><input id="fmd" placeholder="1000 руб. СБП: 500 руб."></div>
+    <div class="ff"><label>Промо-код</label><input id="fpr" placeholder="GET100"></div>
+    <div class="ff"><label>Бездеп</label><input id="fnd" placeholder="100 FS x45"></div>
+    <div class="ff"><label>Ставки на спорт | VIP Бонус</label><input id="fsp" placeholder="Да | Нет"></div>
+    <div class="ff full"><label>Перенос VIP статуса</label><textarea id="fvip" rows="2"></textarea></div>
+    <div class="ff full"><label>Верификация</label><textarea id="fver" rows="2"></textarea></div>
+    <div class="ff full"><label>Целевые страны</label><textarea id="fco" rows="3" placeholder="Россия, Казахстан, ..."></textarea></div>
+  </div>
+  <div class="m-foot">
+    <button class="btn btn-outline" onclick="closeOv('form')">Отмена</button>
+    <button class="btn btn-g" onclick="save()">Сохранить</button>
+  </div>
+</div></div>
+
+<!-- Password -->
+<div class="ov" id="ov-pwd" onclick="if(event.target===this)closeOv('pwd')">
+<div class="modal" style="max-width:380px">
+  <div class="m-head"><div class="m-title">🔐 Доступ</div><button class="m-close" onclick="closeOv('pwd')">✕</button></div>
+  <div class="ff" style="margin-bottom:20px"><label>Пароль</label>
+    <input type="password" id="pwd" placeholder="Введите пароль" onkeydown="if(event.key==='Enter')chkPwd()"></div>
+  <div class="m-foot">
+    <button class="btn btn-outline" onclick="closeOv('pwd')">Отмена</button>
+    <button class="btn btn-g" onclick="chkPwd()">Войти</button>
+  </div>
+</div></div>
+
+<!-- Import -->
+<div class="ov" id="ov-imp" onclick="if(event.target===this)closeOv('imp')">
+<div class="modal" style="max-width:560px">
+  <div class="m-head"><div class="m-title">📥 Импорт данных</div><button class="m-close" onclick="closeOv('imp')">✕</button></div>
+  <p style="font-size:13px;color:var(--t2);margin-bottom:14px">Вставьте JSON с данными казино. Используется для первоначальной загрузки из Excel-файла.</p>
+  <div class="import-area">
+    <label style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.6px">JSON данные</label>
+    <textarea id="imp-json" placeholder='[{"name":"1win","bonus":"..."}]'></textarea>
+  </div>
+  <div class="m-foot">
+    <button class="btn btn-outline" onclick="closeOv('imp')">Отмена</button>
+    <button class="btn btn-g" onclick="importData()">Импортировать</button>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG — ЗАПОЛНИ СВОИМИ ДАННЫМИ ИЗ SUPABASE
+// ══════════════════════════════════════════════
+const SB_URL  = 'https://ilppcsgfxumzbjkufwkf.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlscHBjc2dmeHVtemJqa3Vmd2tmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODY4MDIsImV4cCI6MjA5NjM2MjgwMn0.Rw7Ez8Qu6VVcgkw7Y48kEWRP3iiKUaS6CZcBF7vko74';
+const PASS    = 'Xynlgeve_777'; // ← смени пароль!
+// ══════════════════════════════════════════════
+
+const sb  = supabase.createClient(SB_URL, SB_KEY);
+let all   = [], curId = null, emode = false;
+
+// ─── Load ───────────────────────────────────
+async function load() {
+  const {data,error} = await sb.from('casinos').select('*').order('name');
+  if (error) { toast('Ошибка: '+error.message,'err'); return; }
+  all = data; stats(); filter();
+}
+
+// ─── Render ──────────────────────────────────
+function renderCards(list) {
+  const g = document.getElementById('grid');
+  if (!list.length) { g.innerHTML='<div class="empty"><h3>Ничего не найдено</h3><p>Измените фильтры или поисковый запрос</p></div>'; return; }
+  g.innerHTML = list.map(cardHTML).join('');
+}
+
+function cardHTML(c) {
+  const rc = rClass(c.rating);
+  const sports = (c.sports_vip||'').split('|')[0].trim().toLowerCase().startsWith('да');
+  const vip    = (c.vip_transfer||'').toLowerCase().startsWith('да');
+  const nd     = c.no_deposit && c.no_deposit !== '-' && c.no_deposit.trim();
+  const vc     = verifClass(c.verification);
+  return `<div class="card" onclick="openDet(${c.id})">
+    <div class="c-head">
+      <div class="c-name">${esc(c.name)}</div>
+      ${c.rating?`<div class="r-badge ${rc}">${esc(c.rating)}</div>`:''}
+    </div>
+    <div class="c-bonus">${esc(c.bonus||'—')}</div>
+    <div class="c-row"><span class="c-lbl">Кешбек</span><span class="c-val">${short(c.cashback,46)}</span></div>
+    <div class="c-row"><span class="c-lbl">Мин. деп.</span><span class="c-val">${esc(c.min_deposit||'—')}</span></div>
+    ${c.promo&&c.promo!=='-'?`<div class="c-row"><span class="c-lbl">Промо</span><span class="promo">${esc(c.promo)}</span></div>`:''}
+    <div class="tags">
+      ${sports?'<span class="tag tg">⚽ Спорт</span>':'<span class="tag tgray">Без спорта</span>'}
+      ${vip?'<span class="tag tgold">👑 VIP</span>':''}
+      ${nd?'<span class="tag tg">🎁 Бездеп</span>':''}
+      <span class="tag ${vc.cls}">${vc.lbl}</span>
+    </div>
+    <div class="c-actions" onclick="event.stopPropagation()">
+      <button class="cbtn cbtn-edit" onclick="openForm(${c.id})">✏ Изменить</button>
+      <button class="cbtn cbtn-del"  onclick="del(${c.id})">✕ Удалить</button>
+    </div>
+  </div>`;
+}
+
+// ─── Filter ──────────────────────────────────
+function filter() {
+  const s  = document.getElementById('search').value.toLowerCase();
+  const fv = document.getElementById('fv').value;
+  const fver=document.getElementById('fver').value;
+  const fsp= document.getElementById('fsp').value;
+  const fco= document.getElementById('fco').value.toLowerCase();
+  const fnd= document.getElementById('fnd').value;
+  const list = all.filter(c=>{
+    if (s   && !c.name.toLowerCase().includes(s)) return false;
+    const vip = (c.vip_transfer||'').toLowerCase().startsWith('да');
+    if (fv==='1'&&!vip) return false;
+    if (fv==='0'&& vip) return false;
+    if (fver==='ob'&&!(c.verification||'').includes('Обязательная')) return false;
+    if (fver==='req'&&!(c.verification||'').includes('По запросу')) return false;
+    const sp=(c.sports_vip||'').split('|')[0].trim().toLowerCase().startsWith('да');
+    if (fsp==='1'&&!sp) return false;
+    if (fsp==='0'&& sp) return false;
+    if (fco&&!(c.countries||'').toLowerCase().includes(fco)) return false;
+    if (fnd==='1'&&(!c.no_deposit||c.no_deposit==='-')) return false;
+    return true;
+  });
+  document.getElementById('s-shown').textContent = list.length;
+  renderCards(list);
+}
+
+function clearF() {
+  ['fv','fver','fsp','fnd'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fco').value='';
+  document.getElementById('search').value='';
+  filter();
+}
+
+function stats() {
+  document.getElementById('s-all').textContent  = all.length;
+  document.getElementById('s-nd').textContent   = all.filter(c=>c.no_deposit&&c.no_deposit!=='-').length;
+  document.getElementById('s-vip').textContent  = all.filter(c=>(c.vip_transfer||'').toLowerCase().startsWith('да')).length;
+}
+
+// ─── Detail ──────────────────────────────────
+function openDet(id) {
+  const c=all.find(x=>x.id===id); if(!c)return; curId=id;
+  document.getElementById('d-name').textContent   = c.name;
+  document.getElementById('d-bonus').textContent  = c.bonus||'—';
+  document.getElementById('d-cb').textContent     = c.cashback||'—';
+  document.getElementById('d-md').textContent     = c.min_deposit||'—';
+  document.getElementById('d-promo').textContent  = c.promo||'—';
+  document.getElementById('d-nd').textContent     = c.no_deposit||'—';
+  document.getElementById('d-sp').textContent     = c.sports_vip||'—';
+  document.getElementById('d-vip').textContent    = c.vip_transfer||'—';
+  document.getElementById('d-ver').textContent    = c.verification||'—';
+  document.getElementById('d-co').textContent     = c.countries||'—';
+  document.getElementById('d-rat').textContent    = c.rating||'—';
+  document.getElementById('btn-det-edit').style.display = emode?'':'none';
+  openOv('det');
+}
+function editFromDet(){closeOv('det');openForm(curId);}
+
+// ─── Form ─────────────────────────────────────
+function openForm(id=null) {
+  curId=id;
+  document.getElementById('form-title').textContent = id?'Редактировать казино':'Добавить казино';
+  const c=id?all.find(x=>x.id===id):{};
+  document.getElementById('fn').value   = c.name||'';
+  document.getElementById('frat').value = c.rating||'';
+  document.getElementById('fbon').value = c.bonus||'';
+  document.getElementById('fcb').value  = c.cashback||'';
+  document.getElementById('fmd').value  = c.min_deposit||'';
+  document.getElementById('fpr').value  = c.promo||'';
+  document.getElementById('fnd').value  = c.no_deposit||'';
+  document.getElementById('fsp').value  = c.sports_vip||'';
+  document.getElementById('fvip').value = c.vip_transfer||'';
+  document.getElementById('fver').value = c.verification||'';
+  document.getElementById('fco').value  = c.countries||'';
+  openOv('form');
+}
+
+async function save() {
+  const name=document.getElementById('fn').value.trim();
+  if(!name){toast('Введите название','err');return;}
+  const p={name,rating:document.getElementById('frat').value.trim(),bonus:document.getElementById('fbon').value.trim(),cashback:document.getElementById('fcb').value.trim(),min_deposit:document.getElementById('fmd').value.trim(),promo:document.getElementById('fpr').value.trim(),no_deposit:document.getElementById('fnd').value.trim(),sports_vip:document.getElementById('fsp').value.trim(),vip_transfer:document.getElementById('fvip').value.trim(),verification:document.getElementById('fver').value.trim(),countries:document.getElementById('fco').value.trim()};
+  const {error}=curId?await sb.from('casinos').update(p).eq('id',curId):await sb.from('casinos').insert(p);
+  if(error){toast('Ошибка: '+error.message,'err');return;}
+  toast(curId?'Обновлено ✓':'Добавлено ✓','ok');
+  closeOv('form'); await load();
+}
+
+async function del(id) {
+  if(!confirm('Удалить это казино?'))return;
+  const{error}=await sb.from('casinos').delete().eq('id',id);
+  if(error){toast('Ошибка: '+error.message,'err');return;}
+  toast('Удалено ✓','ok'); await load();
+}
+
+// ─── Import ───────────────────────────────────
+async function importData() {
+  let rows;
+  try { rows=JSON.parse(document.getElementById('imp-json').value); }
+  catch(e){toast('Неверный JSON','err');return;}
+  if(!Array.isArray(rows)){toast('Нужен массив []','err');return;}
+  const{error}=await sb.from('casinos').insert(rows);
+  if(error){toast('Ошибка: '+error.message,'err');return;}
+  toast(`Импортировано ${rows.length} казино ✓`,'ok');
+  closeOv('imp'); await load();
+}
+
+// ─── Edit mode ───────────────────────────────
+function toggleEdit() {
+  if(emode){
+    emode=false; document.body.classList.remove('emode');
+    document.getElementById('btn-add').style.display='none';
+    document.getElementById('btn-em').textContent='✏ Редактировать';
+    document.getElementById('btn-em').classList.remove('on');
+    filter();
+  } else { openOv('pwd'); document.getElementById('pwd').value=''; setTimeout(()=>document.getElementById('pwd').focus(),120); }
+}
+
+function chkPwd() {
+  if(document.getElementById('pwd').value===PASS){
+    emode=true; document.body.classList.add('emode');
+    document.getElementById('btn-add').style.display='';
+    document.getElementById('btn-em').textContent='🔓 Выйти';
+    document.getElementById('btn-em').classList.add('on');
+    closeOv('pwd'); filter();
+
+    // add import button if not present
+    if(!document.getElementById('btn-imp')){
+      const b=document.createElement('button');
+      b.id='btn-imp';b.className='btn btn-outline';b.textContent='📥 Импорт';
+      b.onclick=()=>openOv('imp');
+      document.getElementById('btn-add').after(b);
+    }
+  } else toast('Неверный пароль','err');
+}
+
+// ─── Overlay helpers ─────────────────────────
+function openOv(k){document.getElementById('ov-'+k).classList.add('open');}
+function closeOv(k){document.getElementById('ov-'+k).classList.remove('open');}
+function toggleFilters(){document.getElementById('fbar').classList.toggle('open');document.getElementById('btn-f').classList.toggle('on');}
+
+// ─── Utils ───────────────────────────────────
+function esc(t){const d=document.createElement('div');d.textContent=t||'';return d.innerHTML;}
+function short(t,n){if(!t)return'—';return t.length>n?t.slice(0,n)+'…':t;}
+function rClass(r){const n=parseFloat(r);return n>=9.3?'rh':n>=9.0?'rm':'rl';}
+function verifClass(v){
+  const s=(v||'').toLowerCase();
+  if(s.includes('обязательн'))return{cls:'tr',lbl:'🔴 Верифик.'};
+  if(s.includes('по запросу'))return{cls:'tgold',lbl:'🟡 По запросу'};
+  if(!s||s==='нет')return{cls:'tg',lbl:'🟢 Без верифик.'};
+  return{cls:'tgray',lbl:'⚪ Верифик.'};
+}
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast '+type+' show';
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+load();
+</script>
+</body>
+</html>
